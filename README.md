@@ -40,7 +40,20 @@ t,v,i
 - The Program window shows state, progress, a mini live chart; the Chart
   button opens a fullscreen graph with axis marks and a running cursor
 
-## Run
+## Deploy to Raspberry Pi
+
+One command on the Pi (needs internet + sudo once):
+
+```sh
+git clone https://github.com/Backup-account1/CoPS.git
+cd CoPS
+./setup.sh          # DEMO=1 ./setup.sh for emulator mode
+```
+
+It creates `backend/.venv`, installs the packages and starts the server on
+`0.0.0.0:8000`. Re-run `./setup.sh` after `git pull` to update dependencies.
+
+## Run (manual)
 
 ```sh
 cd backend
