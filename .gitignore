@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Runtime data (created automatically)
+backend/panel.db
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>AKIP-1144 Panel</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <span id="dot" class="dot off"></span>
+    <span id="status" data-i18n="status">disconnected</span>
+  </header>
+
+  <!-- Big buttons -->
+  <main>
+    <button id="btn-connect" class="tile" data-i18n-title="connect">
+      <svg viewBox="0 0 24 24"><path d="M7 7v4a5 5 0 0 0 10 0V7M12 3v4m-5 0h10M12 16v5"/></svg>
+      <span data-i18n="connect">Connect</span>
+    </button>
+    <button id="btn-disconnect" class="tile" data-i18n-title="disconnect">
+      <svg viewBox="0 0 24 24"><path d="M7 7v4a5 5 0 0 0 10 0V7M12 3v4m-5 0h10M12 16v5M4 4l16 16"/></svg>
+      <span data-i18n="disconnect">Disconnect</span>
+    </button>
+    <button id="btn-test" class="tile" data-i18n-title="test">
+      <svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+      <span data-i18n="test">Test</span>
+    </button>
+    <button id="btn-settings" class="tile" data-i18n-title="settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.2 2.2m9.8 9.8 2.2 2.2M4.9 19.1l2.2-2.2m9.8-9.8 2.2-2.2"/></svg>
+      <span data-i18n="settings">Settings</span>
+    </button>
+    <button id="btn-program" class="tile wide" data-i18n-title="program">
+      <svg viewBox="0 0 24 24"><path d="M2 12h4l2-7 4 14 3-10 1.5 3H22"/></svg>
+      <span data-i18n="program">Program</span>
+    </button>
+  </main>
+
+  <!-- Settings drawer -->
+  <div id="overlay" class="hidden"></div>
+  <section id="drawer" class="hidden">
+    <h2 data-i18n="settings">Settings</h2>
+
+    <label data-i18n="connection">Connection</label>
+    <select id="set-mode">
+      <option value="device" data-i18n="mode-device">Device</option>
+      <option value="emulator" data-i18n="mode-emulator">Emulator</option>
+    </select>
+
+    <div id="device-fields">
+      <label data-i18n="port">Port</label>
+      <input id="set-port" type="text" placeholder="auto, COM3, /dev/ttyACM0…">
+      <small data-i18n="port-hint">"auto" tries all ports</small>
+
+      <label data-i18n="baud">Baud rate</label>
+      <select id="set-baud">
+        <option>4800</option><option>9600</option><option>19200</option>
+        <option>38400</option><option>57600</option><option>115200</option>
+      </select>
+    </div>
+
+    <!-- Label is rebuilt from lang/index.json (all languages, native scripts) -->
+    <label id="langLabel" class="langs">Language · Язык · 语言</label>
+    <select id="set-language">
+      <option value="en">English</option>
+      <option value="ru">Русский</option>
+      <option value="zh">中文（简体）</option>
+    </select>
+
+    <div class="row">
+      <button id="btn-save" class="btn primary" data-i18n="save">Save</button>
+      <button id="btn-close" class="btn" data-i18n="close">Close</button>
+    </div>
+  </section>
+
+  <!-- History -->
+  <section id="history">
+    <h2 data-i18n="history">History</h2>
+    <ul id="events"></ul>
+  </section>
+
+  <!-- Program drawer -->
+  <section id="pdrawer" class="hidden">
+    <h2 data-i18n="program">Program</h2>
+    <input id="curve-file" type="file" accept=".csv,.txt" style="display:none">
+    <button id="btn-load" class="btn" data-i18n="load-csv">Load CSV</button>
+    <small data-i18n="csv-hint">columns: t,v,i · lines "# loop=N", "# end=off|hold"</small>
+
+    <!-- Curve status group: visible only in this window -->
+    <div id="curve-status" class="gone">
+      <div class="cs-head">
+        <span data-i18n="status"></span>
+        <span id="cs-state" class="cs-badge idle"></span>
+      </div>
+      <div id="cs-info" class="muted"></div>
+      <div class="cs-bar"><div id="cs-bar"></div></div>
+      <div class="cs-live">
+        <span><b id="cs-v">0.00</b> V</span>
+        <span><b id="cs-i">0.00</b> A</span>
+        <span id="cs-time" class="muted"></span>
+        <span id="cs-lap" class="muted"></span>
+      </div>
+      <svg id="cs-mini" viewBox="0 0 100 30" preserveAspectRatio="none">
+        <line class="grid" x1="0" x2="100" y1="2" y2="2"/>
+        <line class="grid" x1="0" x2="100" y1="13" y2="13"/>
+        <line class="grid" x1="0" x2="100" y1="17" y2="17"/>
+        <line class="grid" x1="0" x2="100" y1="28" y2="28"/>
+        <polyline id="cs-mini-v" points="" fill="none" stroke="#ff5252" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+        <polyline id="cs-mini-i" points="" fill="none" stroke="#f1f3f4" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+        <circle id="cs-dot-v" r="1.8" fill="#ff5252" opacity="0"/>
+        <circle id="cs-dot-i" r="1.8" fill="#f1f3f4" opacity="0"/>
+      </svg>
+    </div>
+
+    <div class="row">
+      <button id="btn-chart" class="btn" data-i18n="chart">Chart</button>
+    </div>
+    <div class="row">
+      <button id="btn-run" class="btn primary" data-i18n="start">Start</button>
+      <button id="btn-stop" class="btn danger" data-i18n="stop">Stop</button>
+    </div>
+    <div class="row"><button id="btn-pclose" class="btn" data-i18n="close">Close</button></div>
+  </section>
+
+  <!-- Fullscreen curve chart -->
+  <div id="chart-view" class="hidden">
+    <div class="cv-head">
+      <span id="cv-title" class="muted"></span>
+      <span class="cv-actions">
+        <button id="btn-cv-full" class="btn small">⛶</button>
+        <button id="btn-cv-close" class="btn small">✕</button>
+      </span>
+    </div>
+    <div id="cv-wrap">
+      <span id="cv-vmax" class="cv-label lv"></span>
+      <span id="cv-vmin" class="cv-label lv"></span>
+      <span id="cv-imax" class="cv-label li"></span>
+      <span id="cv-imin" class="cv-label li"></span>
+      <svg id="cv-svg" viewBox="0 0 100 60" preserveAspectRatio="none">
+        <line class="grid" x1="0" x2="100" y1="15" y2="15"/>
+        <line class="grid" x1="0" x2="100" y1="30" y2="30"/>
+        <line class="grid" x1="0" x2="100" y1="45" y2="45"/>
+        <polyline id="cv-v" points="" fill="none" stroke="#ff5252" stroke-width="2" vector-effect="non-scaling-stroke"/>
+        <polyline id="cv-i" points="" fill="none" stroke="#f1f3f4" stroke-width="2" vector-effect="non-scaling-stroke"/>
+        <line id="cv-cursor" x1="0" y1="0" x2="0" y2="60" stroke="#9aa0a6" stroke-width="1" vector-effect="non-scaling-stroke" opacity="0"/>
+        <circle id="cv-dot-v" r="1.8" fill="#ff5252" opacity="0"/>
+        <circle id="cv-dot-i" r="1.8" fill="#f1f3f4" opacity="0"/>
+      </svg>
+    </div>
+    <div id="cv-ticks"></div>
+    <div class="cv-legend">
+      <span class="lv">V</span><span class="li">I</span>
+      <span id="cv-time"></span><span id="cv-clock"></span>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>

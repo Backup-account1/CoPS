@@ -1,0 +1,5 @@
+[
+  { "code": "en", "name": "English",      "label": "Language" },
+  { "code": "ru", "name": "Русский",      "label": "Язык" },
+  { "code": "zh", "name": "中文（简体）", "label": "语言" }
+]
