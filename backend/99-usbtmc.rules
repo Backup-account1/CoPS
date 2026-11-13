@@ -1,0 +1,3 @@
+# Make USBTMC instruments accessible to non-root users (ITECH/AKIP over USB).
+# Install: sudo cp 99-usbtmc.rules /etc/udev/rules.d/ && sudo udevadm control --reload-rules
+KERNEL=="usbtmc[0-9]*", MODE="0666"

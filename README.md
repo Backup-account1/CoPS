@@ -40,6 +40,21 @@ t,v,i
 - The Program window shows state, progress, a mini live chart; the Chart
   button opens a fullscreen graph with axis marks and a running cursor
 
+## Hardware notes: USBTMC (ITECH/AKIP over USB)
+
+Some units enumerate as **USBTMC** (`/dev/usbtmc0`) instead of a virtual COM
+port (`lsusb` shows e.g. `2ec7:6700 ITECH Ltd. IT6726G`). The backend supports
+this automatically via `backend/usbtmc.py` (kernel usbtmc driver + EOM ioctl).
+One-time permission setup on Linux:
+
+```sh
+sudo cp backend/99-usbtmc.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+```
+
+Then replug the USB cable. Do **not** use `usbreset`-style resets on ITECH
+supplies — they drop off the bus and require a physical replug.
+
 ## Deploy to Raspberry Pi
 
 One command on the Pi (needs internet + sudo once):
