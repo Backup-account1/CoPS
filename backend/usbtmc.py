@@ -39,13 +39,13 @@ def _io(nr: int) -> int:
 
 def _rebind_driver() -> bool:
     """unbind+bind usbtmc (resets bTag on both sides). Needs the sudo rule
-    for /usr/local/bin/usbtmc-rebind.sh; returns True if it ran."""
+    for /usr/local/bin/usbtmc-rebind.sh; returns True only on success."""
     try:
         subprocess.run(
             ["sudo", "-n", "/usr/local/bin/usbtmc-rebind.sh"],
-            check=True, capture_output=True, timeout=10,
+            check=True, capture_output=True, timeout=15,
         )
-        return True
+        return os.path.exists("/dev/usbtmc0")
     except Exception:
         return False
 
@@ -55,6 +55,7 @@ class UsbTmcSerial:
         self.path = path
         self.fd = None
         self._timeout = timeout
+        self._dead = False
         self._open_device()
 
     # -- lifecycle -----------------------------------------------------
@@ -100,12 +101,13 @@ class UsbTmcSerial:
             return True   # recovered without rebind
         except OSError:
             pass
-        ok = _rebind_driver()
+        _rebind_driver()
         time.sleep(0.5)
         try:
             self._open_device()
             return True
         except OSError:
+            self._dead = True
             return False
 
     # -- pyserial-like surface ------------------------------------------
@@ -132,7 +134,7 @@ class UsbTmcSerial:
         except OSError:
             if self._recover():
                 return os.write(self.fd, data)
-            raise
+            raise OSError(19, "device went away — replug the USB cable and reconnect")
 
     def readline(self) -> bytes:
         """read() starts the exchange itself; a single call returns the whole
@@ -142,7 +144,6 @@ class UsbTmcSerial:
         except OSError:
             self._recover()
             return b""
-
     def close(self) -> None:
         try:
             os.close(self.fd)
