@@ -1,0 +1,25 @@
+# CoPS demo curve — АКИП-1144 / ITECH IT6726G
+# Format: t(seconds), v(volts), i(amps)  — one file drives both channels.
+# Lines starting with '#' are comments; 'loop=' and 'end=' are parameters.
+#   loop=0 means repeat forever.  end=off|hold sets the final state.
+# Values are clamped to the safety limits set in Settings (610 V / 10.5 A).
+
+# ramp 0 -> 12 V over 5 s, current limit 0.5 A
+0,0,0.5
+
+# hold 12 V for 5 s
+5,12,0.5
+
+# boost: 12 -> 24 V over 5 s, raise limit to 2 A
+10,24,2
+
+# hold 24 V for 10 s
+15,24,2
+20,24,2
+
+# ramp back down to 0 V over 5 s
+25,12,1
+30,0,0.5
+
+# loop=1
+# end=off
