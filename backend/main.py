@@ -79,6 +79,7 @@ def _is_demo() -> bool:
 
 def _candidate_ports() -> list:
     ports = glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")
+    ports += glob.glob("/dev/usbtmc*")   # USBTMC supplies (ITECH/AKIP over USB)
     ports += [f"COM{n}" for n in range(1, 21)]
     return ports
 
@@ -130,7 +131,11 @@ def connect():
         last_err = "no ports found"
         for p in ports:
             try:
-                s = serial.Serial(p, baudrate=cfg["baud"], timeout=2.0)
+                if "usbtmc" in p:
+                    from usbtmc import UsbTmcSerial
+                    s = UsbTmcSerial(p, timeout=2.0)
+                else:
+                    s = serial.Serial(p, baudrate=cfg["baud"], timeout=2.0)
             except Exception as e:
                 last_err = str(e)
                 continue

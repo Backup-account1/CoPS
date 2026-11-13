@@ -2,8 +2,5 @@ fastapi>=0.110
 uvicorn[standard]>=0.29
 pyserial>=3.5
 
-# Optional: only needed if the supply enumerates as USBTMC (not a COM port).
-# On Windows you may instead use NI-VISA with plain `pyvisa`.
-pyvisa>=1.13
-pyvisa-py>=0.7
-pyusb>=1.2
+# USBTMC devices (ITECH/AKIP over USB) use the Linux kernel usbtmc driver
+# (/dev/usbtmc0) via backend/usbtmc.py — no extra Python packages needed.
