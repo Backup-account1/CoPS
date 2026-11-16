@@ -10,7 +10,7 @@ cd "$(dirname "$0")/.."
 
 case "$1" in
   headed|visible|gui)
-    export HEADED=1 SLOW_MO="${SLOW_MO:-300}"
+    export HEADED=1 SLOW_MO="${SLOW_MO:-600}"
     ;;
 esac
 

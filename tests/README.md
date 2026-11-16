@@ -27,8 +27,11 @@ HEADED=1 SLOW_MO=300 python3 -m pytest tests/test_e2e_ui.py -v   # visible, slow
 | Var        | Effect                                            |
 | ---------- | ------------------------------------------------- |
 | `HEADED=1` | show a real browser window (visible UI testing)   |
-| `SLOW_MO`  | delay (ms) between Playwright actions, default 0  |
+| `SLOW_MO`  | delay (ms) between actions; default **600** in headed, 0 headless |
 | `E2E_CHROME` | path to an alternative Chromium/Chrome binary   |
+
+In headed mode a **virtual cursor** (red arrow) glides to every button and a
+red ripple marks each click, so you can follow the test like a user.
 
 ## What the 6 tests cover
 

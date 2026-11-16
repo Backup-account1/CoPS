@@ -10,7 +10,7 @@ import re
 import pytest
 from playwright.sync_api import expect, sync_playwright
 
-from conftest import REPO, SLOW_MO, chrome_executable, headed
+from conftest import REPO, SLOW_MO, chrome_executable, headed, install_virtual_cursor
 
 SAMPLE_CSV = REPO / "samples" / "demo_curve.csv"
 
@@ -25,6 +25,8 @@ def page(base_url):
             args=["--no-sandbox"],
         )
         pg = browser.new_page(viewport={"width": 412, "height": 850})  # phone-ish
+        if headed():
+            install_virtual_cursor(pg)    # visible gliding arrow + click ripple
         pg.goto(base_url, wait_until="networkidle")
         yield pg, base_url
         browser.close()
