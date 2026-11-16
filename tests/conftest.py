@@ -30,33 +30,41 @@ SLOW_MO = int(os.environ.get("SLOW_MO", "600" if bool(os.environ.get("HEADED")) 
 
 CURSOR_JS = """
 (() => {
-  if (document.getElementById('e2e-cursor')) return;
-  const css = document.createElement('style');
-  css.textContent = `
-    #e2e-cursor{position:fixed;left:0;top:0;z-index:2147483647;pointer-events:none;
-      transition:transform .28s cubic-bezier(.2,.7,.3,1);will-change:transform;
-      filter:drop-shadow(0 1px 2px rgba(0,0,0,.45));}
-    #e2e-ping{position:fixed;z-index:2147483646;pointer-events:none;width:26px;height:26px;
-      margin:-13px 0 0 -13px;border:3px solid #ff3b30;border-radius:50%;
-      animation:e2e-ping .45s ease-out forwards;}
-    @keyframes e2e-ping{from{opacity:.9;transform:scale(.3)}to{opacity:0;transform:scale(1.6)}}
-  `;
-  (document.head || document.documentElement).appendChild(css);
-  const c = document.createElement('div');
-  c.id = 'e2e-cursor';
-  c.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24">'
-    + '<path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87'
-    + 'c.45 0 .67-.54.35-.85L6.35 2.85a.5.5 0 0 0-.85.36z" '
-    + 'fill="#ff3b30" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>';
-  document.documentElement.appendChild(c);
-  window.__cursor = (x, y) => { c.style.transform = `translate(${x - 5}px, ${y - 3}px)`; };
-  window.__ping = (x, y) => {
-    const p = document.createElement('div');
-    p.id = 'e2e-ping';
-    p.style.left = `${x}px`; p.style.top = `${y}px`;
-    document.documentElement.appendChild(p);
-    setTimeout(() => p.remove(), 500);
+  const setup = () => {
+    if (document.getElementById('e2e-cursor')) return;
+    const css = document.createElement('style');
+    css.textContent = `
+      #e2e-cursor{position:fixed;left:0;top:0;z-index:2147483647;pointer-events:none;
+        transition:transform .28s cubic-bezier(.2,.7,.3,1);will-change:transform;
+        filter:drop-shadow(0 1px 2px rgba(0,0,0,.45));}
+      #e2e-ping{position:fixed;z-index:2147483646;pointer-events:none;width:26px;height:26px;
+        margin:-13px 0 0 -13px;border:3px solid #ff3b30;border-radius:50%;
+        animation:e2e-ping .45s ease-out forwards;}
+      @keyframes e2e-ping{from{opacity:.9;transform:scale(.3)}to{opacity:0;transform:scale(1.6)}}
+    `;
+    (document.head || document.documentElement).appendChild(css);
+    const c = document.createElement('div');
+    c.id = 'e2e-cursor';
+    c.innerHTML = '<svg width="34" height="34" viewBox="0 0 24 24">'
+      + '<path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87'
+      + 'c.45 0 .67-.54.35-.85L6.35 2.85a.5.5 0 0 0-.85.36z" '
+      + 'fill="#ff3b30" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+    document.body.appendChild(c);
+    window.__cursor = (x, y) => { c.style.transform = `translate(${x - 8}px, ${y - 4}px)`; };
+    window.__ping = (x, y) => {
+      const p = document.createElement('div');
+      p.id = 'e2e-ping';
+      p.style.left = `${x}px`; p.style.top = `${y}px`;
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 500);
+    };
   };
+  // at document-start the DOM is empty — inject once the document is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setup);
+  } else {
+    setup();
+  }
 })();
 """
 
