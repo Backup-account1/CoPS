@@ -18,6 +18,31 @@ header {
 .dot.on  { background: #2ecc71; box-shadow: 0 0 0 3px #2ecc7133; }
 .dot.demo{ background: #f4c542; box-shadow: 0 0 0 3px #f4c54233; }
 
+/* Menu bar ------------------------------------------------------------- */
+#menubar {
+  position: sticky; top: 8px; z-index: 40;   /* stays clickable over drawers/chart */
+  display: flex; align-items: center; gap: 10px; margin-top: 10px;
+  background: #111418; border-radius: 12px;
+}
+.mb {
+  width: 46px; height: 40px; flex: none;
+  border: none; border-radius: 10px; background: #1b1f24; color: #9aa0a6;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.mb svg {
+  width: 22px; height: 22px;
+  fill: none; stroke: currentColor; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.mb:active { background: #262b31; }
+.mb:disabled { opacity: 0.3; }
+.mb-title {
+  flex: 1; text-align: center; font-size: 15px; font-weight: 700;
+  color: #e8eaed; letter-spacing: 0.4px;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+
 /* Button grid -------------------------------------------------------- */
 main {
   flex: 1; display: grid;

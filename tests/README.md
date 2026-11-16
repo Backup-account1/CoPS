@@ -33,14 +33,15 @@ HEADED=1 SLOW_MO=300 python3 -m pytest tests/test_e2e_ui.py -v   # visible, slow
 In headed mode a **virtual cursor** (red arrow) glides to every button and a
 red ripple marks each click, so you can follow the test like a user.
 
-## What the 6 tests cover
+## What the 7 tests cover
 
 1. **tiles** — all five main buttons render; Test/Disconnect locked while disconnected
 2. **connect → test → disconnect** — header shows the emulator IDN, Test toast shows live V/A, safe state after disconnect
 3. **language** — switch EN→RU and back through Settings; labels re-render and persist
 4. **mode switch** — device fields hide in emulator mode
-5. **program** — load `samples/demo_curve.csv`, Start (running badge, progress bar, mini chart), Stop, fullscreen chart with axes and time ticks
-6. **history** — events log records the activity
+5. **menu bar** — Back unlocks on overlays and closes chart/program/settings layer by layer; Home closes everything; History scrolls the log into view
+6. **program** — load `samples/demo_curve.csv`, Start (running badge, progress bar, mini chart), Stop, fullscreen chart with axes and time ticks
+7. **history** — events log records the activity
 
 ## Notes
 

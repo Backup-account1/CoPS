@@ -41,6 +41,7 @@ function applyLang() {
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     el.textContent = t(el.dataset.i18n);
   });
+  syncMenubar();
 }
 
 /* ---- helpers --------------------------------------------------------- */
@@ -72,7 +73,8 @@ async function refreshStatus() {
     $("set-baud").value = s.settings.baud;
     if ($("set-mode").value !== s.settings.mode) $("set-mode").value = s.settings.mode;
     updateDeviceFields();
-    if (LANG.current !== s.settings.language) await setLang(s.settings.language);
+    if (LANG.current !== s.settings.language ||
+        !Object.keys(LANG.dict).length) await setLang(s.settings.language);
   } catch {
     state = { connected: false, demo: false };
   }
@@ -146,11 +148,41 @@ $("btn-test").addEventListener("click", async () => {
 function openDrawer(el, open) {
   el.classList.toggle("hidden", !open);
   $("overlay").classList.toggle("hidden", !open);
+  syncMenubar();
 }
 function closeDrawers() {
   openDrawer($("drawer"), false);
   openDrawer($("pdrawer"), false);
 }
+
+/* ---- menu bar: back / screen title / home / history ----------------------- */
+function syncMenubar() {
+  const chartOpen = !$("chart-view").classList.contains("hidden");
+  const pOpen = !$("pdrawer").classList.contains("hidden");
+  const dOpen = !$("drawer").classList.contains("hidden");
+  $("mb-back").disabled = !(chartOpen || pOpen || dOpen);
+  if (!Object.keys(LANG.dict).length) return;   // translations not loaded yet
+  $("mb-title").textContent = chartOpen ? t("chart")
+    : pOpen ? t("program")
+    : dOpen ? t("settings")
+    : t("panel");
+}
+
+$("mb-back").addEventListener("click", () => {
+  if (!$("chart-view").classList.contains("hidden")) closeChart();
+  else if (!$("pdrawer").classList.contains("hidden")) openDrawer($("pdrawer"), false);
+  else openDrawer($("drawer"), false);
+});
+$("mb-home").addEventListener("click", () => {
+  closeChart();
+  closeDrawers();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+$("mb-history").addEventListener("click", () => {
+  closeChart();
+  closeDrawers();
+  $("history").scrollIntoView({ behavior: "smooth", block: "start" });
+});
 
 $("btn-settings").addEventListener("click", () => openDrawer($("drawer"), true));
 $("btn-close").addEventListener("click", () => openDrawer($("drawer"), false));
@@ -287,11 +319,13 @@ let chartScale = null; // { dur, vMin, vRange, iMin, iRange }
 
 function openChart() {
   $("chart-view").classList.remove("hidden");
+  syncMenubar();
   buildChart();
 }
 
 function closeChart() {
   $("chart-view").classList.add("hidden");
+  syncMenubar();
 }
 
 async function buildChart() {
@@ -436,3 +470,4 @@ loadManifest().catch(() => {});
 refreshStatus();
 refreshEvents();
 updateCurve();
+syncMenubar();

@@ -26,5 +26,8 @@
   "lap": "pass",
   "running": "running",
   "idle": "ready",
-  "chart": "Chart"
+  "chart": "Chart",
+  "back": "Back",
+  "home": "Home",
+  "panel": "Panel"
 }

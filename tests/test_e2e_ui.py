@@ -107,6 +107,53 @@ def test_settings_mode_switch_hides_device_fields(page):
     expect(pg.locator("#drawer")).to_have_class("hidden")
 
 
+# ------------------------------------------------------------- menu bar ----
+def test_menubar_home_back_history(page):
+    pg, _ = page
+    ensure_connected(pg)
+
+    # on the main screen Back is disabled
+    expect(pg.locator("#mb-back")).to_be_disabled()
+
+    # open Settings: title switches, Back unlocks
+    pg.locator("#btn-settings").click()
+    expect(pg.locator("#mb-title")).to_have_text(
+        re.compile(r"Settings|Настройки|设置"), timeout=5000)
+    expect(pg.locator("#mb-back")).to_be_enabled()
+    pg.locator("#mb-back").click()
+    expect(pg.locator("#drawer")).to_have_class("hidden")
+
+    # chart screen: Back closes only the chart, Program drawer stays open
+    pg.locator("#btn-program").click()
+    pg.locator("#curve-file").set_input_files(str(SAMPLE_CSV))
+    expect(pg.locator("#curve-status")).not_to_have_class("gone", timeout=5000)
+    pg.locator("#btn-chart").click()
+    expect(pg.locator("#mb-title")).to_have_text(
+        re.compile(r"Chart|График|曲线图"), timeout=5000)
+    pg.locator("#mb-back").click()
+    expect(pg.locator("#chart-view")).to_have_class("hidden")
+    expect(pg.locator("#pdrawer")).not_to_have_class("hidden")
+
+    # Home closes everything, title back to main screen
+    pg.locator("#mb-home").click()
+    expect(pg.locator("#pdrawer")).to_have_class("hidden")
+    expect(pg.locator("#mb-title")).to_have_text(
+        re.compile(r"Panel|Панель|面板"), timeout=5000)
+
+    # History scrolls the event log into view
+    pg.locator("#mb-history").click()
+    pg.wait_for_timeout(800)  # smooth scroll
+    in_view = pg.evaluate("""() => {
+      const r = document.getElementById('history').getBoundingClientRect();
+      return r.top >= 0 && r.top < window.innerHeight;
+    }""")
+    assert in_view, "history section not scrolled into view"
+
+    # leave a clean disconnected state for the next tests
+    pg.locator("#btn-disconnect").click()
+    expect(pg.locator("#dot")).to_have_class("dot demo", timeout=8000)
+
+
 # --------------------------------------------------------------- program ---
 def test_program_load_start_stop_chart(page):
     pg, _ = page

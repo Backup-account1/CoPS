@@ -26,5 +26,8 @@
   "lap": "循环",
   "running": "运行中",
   "idle": "就绪",
-  "chart": "曲线图"
+  "chart": "曲线图",
+  "back": "返回",
+  "home": "主页",
+  "panel": "面板"
 }
