@@ -40,8 +40,9 @@ class EmulatorSerial:
 
     def write(self, data: bytes):
         for line in data.decode(errors="ignore").splitlines():
-            if line.strip():
-                self._cmd(line.strip())
+            for part in line.split(";"):     # chained commands: VOLT 2;VOLT?
+                if part.strip():
+                    self._cmd(part.strip())
         return len(data)
 
     def readline(self) -> bytes:
@@ -58,6 +59,8 @@ class EmulatorSerial:
             self._reply(self._idn)
         elif u == "*CLS":
             pass
+        elif u == "SYST:ERR?":
+            self._reply('0, "no error"')
         elif u == "VOLT?":
             self._reply(f"{self.sp_v:.3f}")
         elif u == "CURR?":

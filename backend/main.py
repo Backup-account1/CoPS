@@ -86,11 +86,17 @@ def _candidate_ports() -> list:
 
 
 def _scpi(cmd: str, timeout: float = 2.0) -> str:
-    """Write a SCPI command, return the response line."""
+    """Write a SCPI command. Queries (ending '?') return the response.
+    Plain commands are written WITHOUT reading — the IT6726G does not
+    answer them, and a read after a plain write desyncs/stalls USBTMC
+    (root cause of "curve runs but the output stays 0")."""
     if _ser is None:
         raise HTTPException(400, "not connected")
     _ser.timeout = timeout
     try:
+        if not cmd.rstrip().endswith("?"):
+            _ser.write((cmd + "\n").encode())
+            return ""
         _ser.reset_input_buffer()
         _ser.write((cmd + "\n").encode())
         return _ser.readline().decode(errors="ignore").strip()
@@ -98,6 +104,21 @@ def _scpi(cmd: str, timeout: float = 2.0) -> str:
         raise
     except Exception as e:
         raise HTTPException(502, f"io error: {e}") from e
+
+
+def _drain_errq() -> int:
+    """Drain the device error queue. A full queue ('-350 Too many errors')
+    makes the IT6726G firmware drop commands silently."""
+    n = 0
+    try:
+        for _ in range(30):
+            r = _scpi("SYST:ERR?", timeout=1.0)
+            if r.startswith("0,") or r.strip() in ("0", ""):
+                break
+            n += 1
+    except Exception:
+        pass
+    return n
 
 
 # ---- endpoints: status / connection ----------------------------------
@@ -146,7 +167,8 @@ def connect():
                 if len(idn) < 5:
                     raise ValueError("no *IDN? response")
                 globals()["_idn"] = idn
-                db.add_event("connect", idn)
+                n = _drain_errq()
+                db.add_event("connect", f"{idn} errq_drained={n}")
                 return {"ok": True, "idn": idn}
             except Exception as e:
                 s.close()
@@ -203,11 +225,9 @@ def verify():
         try:
             old_v, old_i = _scpi("VOLT?"), _scpi("CURR?")
             old_out = _scpi("OUTP?")
-            _scpi(f"VOLT {set_v}")
-            _scpi(f"CURR {set_i}")
-            _scpi("OUTP ON")
-            out["ack"]["volt"] = _scpi("VOLT?")
-            out["ack"]["curr"] = _scpi("CURR?")
+            out["ack"]["volt"] = _scpi(f"VOLT {set_v};VOLT?")
+            out["ack"]["curr"] = _scpi(f"CURR {set_i};CURR?")
+            out["ack"]["outp"] = _scpi("OUTP ON;OUTP?")
             time.sleep(1.0)                      # let the output settle
             out["meas"]["volt"] = _scpi("MEAS:VOLT?")
             out["meas"]["curr"] = _scpi("MEAS:CURR?")
@@ -217,14 +237,14 @@ def verify():
             return out
         finally:
             try:                                 # restore previous state
-                _scpi(f"VOLT {_safe(old_v)}")
-                _scpi(f"CURR {_safe(old_i)}")
+                _scpi(f"VOLT {_safe(old_v)};VOLT?")
+                _scpi(f"CURR {_safe(old_i)};CURR?")
                 was_on = float(old_out or "0") >= 0.5
             except Exception:
                 was_on = False
             if not was_on:
                 try:
-                    _scpi("OUTP OFF")
+                    _scpi("OUTP OFF;OUTP?")
                 except Exception:
                     pass
 
@@ -343,7 +363,7 @@ async def _run_curve():
     db.add_event("curve_start", f'{_curve["name"]} x{prm["loop"] or "inf"}')
     _meas.update(volt=None, curr=None)
     try:
-        _scpi("OUTP ON")
+        _scpi("OUTP ON;OUTP?")           # chained readback = exactly 1 response
         for _ in range(loops):
             t0 = time.time()
             tick = 0
@@ -352,8 +372,8 @@ async def _run_curve():
                     return
                 el = time.time() - t0
                 v, i = interp(pts, min(el, dur))
-                _scpi(f"VOLT {v:.3f}")
-                _scpi(f"CURR {i:.3f}")
+                _scpi(f"VOLT {v:.3f};VOLT?")     # set + readback in one message
+                _scpi(f"CURR {i:.3f};CURR?")
                 tick += 1
                 if tick % 2 == 0:            # real feedback: MEAS every ~0.4 s
                     try:
@@ -369,7 +389,7 @@ async def _run_curve():
     finally:
         if err or _run["stopped"] or prm["end"] != "hold":
             try:
-                _scpi("OUTP OFF")
+                _scpi("OUTP OFF;OUTP?")
             except Exception:
                 pass
         db.add_event("curve_error", err) if err else db.add_event(

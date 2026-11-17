@@ -1,0 +1,7 @@
+# loop test: voltage ramps 0 -> 20 V and back, 20 s per pass
+# current limit 5 A
+# loop=10
+# end=off
+0,0,5
+10,20,5
+20,0,5
