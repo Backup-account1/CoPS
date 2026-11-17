@@ -34,6 +34,7 @@ _lock = threading.Lock()
 
 _curve = {"name": None, "points": None, "params": {}}
 _run = {"task": None, "stopped": False, "started": 0.0}
+_meas = {"volt": None, "curr": None}   # last real device measurements during a run
 
 
 def _limits():
@@ -182,6 +183,72 @@ def test():
     return {"ok": True, "idn": idn, "volt": volt, "curr": curr}
 
 
+@app.post("/api/verify")
+def verify():
+    """Closed-loop feedback check: send a voltage, read back what the device
+    acknowledged (VOLT?/CURR?) and what it really outputs (MEAS:VOLT? etc.),
+    then restore the previous state. Safe: 2 V / 0.5 A for ~1 s."""
+    if _ser is None:
+        raise HTTPException(400, "not connected")
+    if _running():
+        raise HTTPException(409, "curve is running — stop it first")
+
+    set_v, set_i = 2.0, 0.5
+    out = {"set": {"volt": set_v, "curr": set_i},
+           "ack": {"volt": None, "curr": None},
+           "meas": {"volt": None, "curr": None}, "ok": False}
+    old_v = old_i = "0.000"
+    old_out = "0"                        # assume output was off (safe restore)
+    with _lock:
+        try:
+            old_v, old_i = _scpi("VOLT?"), _scpi("CURR?")
+            old_out = _scpi("OUTP?")
+            _scpi(f"VOLT {set_v}")
+            _scpi(f"CURR {set_i}")
+            _scpi("OUTP ON")
+            out["ack"]["volt"] = _scpi("VOLT?")
+            out["ack"]["curr"] = _scpi("CURR?")
+            time.sleep(1.0)                      # let the output settle
+            out["meas"]["volt"] = _scpi("MEAS:VOLT?")
+            out["meas"]["curr"] = _scpi("MEAS:CURR?")
+        except HTTPException as e:
+            out["error"] = str(e.detail)
+            db.add_event("verify_failed", out["error"])
+            return out
+        finally:
+            try:                                 # restore previous state
+                _scpi(f"VOLT {_safe(old_v)}")
+                _scpi(f"CURR {_safe(old_i)}")
+                was_on = float(old_out or "0") >= 0.5
+            except Exception:
+                was_on = False
+            if not was_on:
+                try:
+                    _scpi("OUTP OFF")
+                except Exception:
+                    pass
+
+    def _f(x):
+        try:
+            return float(x)
+        except (TypeError, ValueError):
+            return None
+
+    av, mv = _f(out["ack"]["volt"]), _f(out["meas"]["volt"])
+    out["ok"] = (av is not None and abs(av - set_v) < 0.05 and
+                 mv is not None and abs(mv - set_v) < 0.25)
+    db.add_event("verify", f"ack={out['ack']['volt']} meas={out['meas']['volt']} ok={out['ok']}")
+    return out
+
+
+def _safe(raw: str) -> str:
+    """Return a printable SCPI float from a readback string."""
+    try:
+        return f"{float(raw):.3f}"
+    except (TypeError, ValueError):
+        return "0.000"
+
+
 @app.put("/api/settings")
 def update_settings(s: Settings):
     if s.language not in ("en", "ru", "zh"):
@@ -274,10 +341,12 @@ async def _run_curve():
     dur = pts[-1][0]
     err = None
     db.add_event("curve_start", f'{_curve["name"]} x{prm["loop"] or "inf"}')
+    _meas.update(volt=None, curr=None)
     try:
         _scpi("OUTP ON")
         for _ in range(loops):
             t0 = time.time()
+            tick = 0
             while True:
                 if _run["stopped"]:
                     return
@@ -285,6 +354,13 @@ async def _run_curve():
                 v, i = interp(pts, min(el, dur))
                 _scpi(f"VOLT {v:.3f}")
                 _scpi(f"CURR {i:.3f}")
+                tick += 1
+                if tick % 2 == 0:            # real feedback: MEAS every ~0.4 s
+                    try:
+                        _meas["volt"] = float(_scpi("MEAS:VOLT?", timeout=0.8) or 0)
+                        _meas["curr"] = float(_scpi("MEAS:CURR?", timeout=0.8) or 0)
+                    except Exception:
+                        pass                 # keep last known values
                 if el >= dur:
                     break
                 await asyncio.sleep(0.2)
@@ -325,7 +401,9 @@ def curve_progress():
     v, i = interp(_curve["points"], pos)
     return {
         "running": True, "elapsed": el, "duration": dur,
-        "lap": lap, "volt": v, "curr": i, **_curve_meta(),
+        "lap": lap, "volt": v, "curr": i,
+        "meas_volt": _meas["volt"], "meas_curr": _meas["curr"],
+        **_curve_meta(),
     }
 
 

@@ -43,6 +43,16 @@ red ripple marks each click, so you can follow the test like a user.
 6. **program** — load `samples/demo_curve.csv`, Start (running badge, progress bar, mini chart), Stop, fullscreen chart with axes and time ticks
 7. **history** — events log records the activity
 
+## API tests (`tests/test_api.py`)
+
+Fast HTTP-only checks (run together with the browser ones, or alone:
+`python3 -m pytest tests/test_api.py -v`):
+
+- verify refuses to run when not connected
+- **feedback round-trip**: send 2 V → device acknowledges (`VOLT?`/`CURR?`) →
+  measured output matches (`MEAS:VOLT?`)
+- curve progress reports **measured** V/A from the device during a run
+
 ## Notes
 
 - The server under test is spawned by `tests/conftest.py` with `DEMO=1`

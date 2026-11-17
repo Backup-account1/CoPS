@@ -248,8 +248,8 @@ async function updateCurve() {
   if (p.running) {
     const pct = p.duration ? Math.min(100, ((p.elapsed % p.duration) / p.duration) * 100) : 0;
     $("cs-bar").style.width = pct + "%";
-    $("cs-v").textContent = p.volt.toFixed(2);
-    $("cs-i").textContent = p.curr.toFixed(2);
+    $("cs-v").textContent = (p.meas_volt ?? p.volt).toFixed(2);
+    $("cs-i").textContent = (p.meas_curr ?? p.curr).toFixed(2);
     $("cs-lap").textContent = `${t("lap")} #${p.lap}`;
     const pos = p.params.loop !== 1 ? p.elapsed % p.duration : Math.min(p.elapsed, p.duration);
     $("cs-time").textContent = `t=${pos.toFixed(1)}/${p.duration} s`;
