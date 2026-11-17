@@ -80,6 +80,8 @@ class EmulatorSerial:
         elif u == "MEAS:POW?":
             m = self._measure()
             self._reply(f"{m['v'] * m['i']:.3f}")
+        elif u in ("SYST:REM", "SYST:LOC", "SYST:REM ON", "SYST:LOC ON"):
+            pass                                     # remote/local: no reply
         else:
             self._reply("ERROR")  # unknown command
 

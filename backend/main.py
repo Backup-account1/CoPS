@@ -169,7 +169,12 @@ def connect():
                     raise ValueError("no *IDN? response")
                 globals()["_idn"] = idn
                 n = _drain_errq()
-                db.add_event("connect", f"{idn} errq_drained={n}")
+                _scpi("SYST:REM")   # pure write: enable REMOTE mode — the
+                                    # device rejects all setpoints otherwise
+                                    # (-200 Execution error every write)
+                n2 = _drain_errq()  # SYST:REM itself logs an error entry
+                db.add_event("connect",
+                             f"{idn} remote=on drained={n}+{n2}")
                 return {"ok": True, "idn": idn}
             except Exception as e:
                 s.close()
@@ -226,9 +231,12 @@ def verify():
         try:
             old_v, old_i = _scpi("VOLT?"), _scpi("CURR?")
             old_out = _scpi("OUTP?")
-            out["ack"]["volt"] = _scpi(f"VOLT {set_v};VOLT?")
-            out["ack"]["curr"] = _scpi(f"CURR {set_i};CURR?")
-            out["ack"]["outp"] = _scpi("OUTP ON;OUTP?")
+            _scpi(f"VOLT {set_v}")            # pure write — device does not answer
+            out["ack"]["volt"] = _scpi("VOLT?")   # separate readback query
+            _scpi(f"CURR {set_i}")
+            out["ack"]["curr"] = _scpi("CURR?")
+            _scpi("OUTP ON")
+            out["ack"]["outp"] = _scpi("OUTP?")
             time.sleep(1.0)                      # let the output settle
             out["meas"]["volt"] = _scpi("MEAS:VOLT?")
             out["meas"]["curr"] = _scpi("MEAS:CURR?")
@@ -238,14 +246,14 @@ def verify():
             return out
         finally:
             try:                                 # restore previous state
-                _scpi(f"VOLT {_safe(old_v)};VOLT?")
-                _scpi(f"CURR {_safe(old_i)};CURR?")
+                _scpi(f"VOLT {_safe(old_v)}")
+                _scpi(f"CURR {_safe(old_i)}")
                 was_on = float(old_out or "0") >= 0.5
             except Exception:
                 was_on = False
             if not was_on:
                 try:
-                    _scpi("OUTP OFF;OUTP?")
+                    _scpi("OUTP OFF")
                 except Exception:
                     pass
 
@@ -285,8 +293,8 @@ def poweroff():
                 break
             time.sleep(0.2)
     try:                                     # supply to a safe state
-        _scpi("VOLT 0;VOLT?")
-        _scpi("OUTP OFF;OUTP?")
+        _scpi("VOLT 0")
+        _scpi("OUTP OFF")
     except Exception:
         pass
     db.add_event("poweroff", "safe shutdown requested")
@@ -391,7 +399,7 @@ async def _run_curve():
     db.add_event("curve_start", f'{_curve["name"]} x{prm["loop"] or "inf"}')
     _meas.update(volt=None, curr=None)
     try:
-        _scpi("OUTP ON;OUTP?")           # chained readback = exactly 1 response
+        _scpi("OUTP ON")                     # pure write — no readback
         for _ in range(loops):
             t0 = time.time()
             tick = 0
@@ -400,8 +408,8 @@ async def _run_curve():
                     return
                 el = time.time() - t0
                 v, i = interp(pts, min(el, dur))
-                _scpi(f"VOLT {v:.3f};VOLT?")     # set + readback in one message
-                _scpi(f"CURR {i:.3f};CURR?")
+                _scpi(f"VOLT {v:.3f}")       # pure write, NO read after
+                _scpi(f"CURR {i:.3f}")
                 tick += 1
                 if tick % 2 == 0:            # real feedback: MEAS every ~0.4 s
                     try:
@@ -417,7 +425,7 @@ async def _run_curve():
     finally:
         if err or _run["stopped"] or prm["end"] != "hold":
             try:
-                _scpi("OUTP OFF;OUTP?")
+                _scpi("OUTP OFF")
             except Exception:
                 pass
         db.add_event("curve_error", err) if err else db.add_event(
