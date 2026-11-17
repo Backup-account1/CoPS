@@ -38,6 +38,13 @@ def test_verify_send_and_readback(base_url):
     _post(f"{base_url}/api/disconnect")
 
 
+def test_poweroff_is_demo_safe(base_url):
+    r = _post(f"{base_url}/api/poweroff")
+    assert r["ok"] is True and r["demo"] is True
+    # the demo server must still be alive afterwards
+    assert _get(f"{base_url}/api/status")["demo"] is True
+
+
 def test_curve_progress_returns_measured_values(base_url):
     csv = b"# loop=1\n# end=off\n0,2.0,0.2\n3,2.0,0.2\n"
     req = urllib.request.Request(

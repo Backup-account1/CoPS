@@ -154,6 +154,30 @@ def test_menubar_home_back_history(page):
     expect(pg.locator("#dot")).to_have_class("dot demo", timeout=8000)
 
 
+# ------------------------------------------------------------ power off ----
+def test_power_off_dialog(page):
+    pg, base_url = page
+    pg.locator("#btn-power").click()
+    expect(pg.locator("#pwr-view")).to_be_visible()
+
+    # cancel path closes the dialog
+    pg.locator("#btn-pwr-no").click()
+    expect(pg.locator("#pwr-view")).to_have_class("hidden")
+
+    # confirm path: demo server answers with the shutdown message
+    pg.locator("#btn-power").click()
+    pg.locator("#btn-pwr-yes").click()
+    expect(pg.locator("#pwr-text")).to_contain_text(
+        re.compile(r"Shutting down|Выключение|正在关机"), timeout=5000)
+    expect(pg.locator("#btn-pwr-yes")).to_have_class(re.compile(r"\bgone\b"))
+
+    # the panel is still alive afterwards (demo mode never really shuts down)
+    pg.locator("#btn-pwr-x").click()
+    expect(pg.locator("#pwr-view")).to_have_class("hidden")
+    pg.goto(base_url, wait_until="networkidle")
+    wait_status(pg)
+
+
 # --------------------------------------------------------------- program ---
 def test_program_load_start_stop_chart(page):
     pg, _ = page

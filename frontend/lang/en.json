@@ -29,5 +29,11 @@
   "chart": "Chart",
   "back": "Back",
   "home": "Home",
-  "panel": "Panel"
+  "panel": "Panel",
+  "power": "Power",
+  "pwr-confirm": "Shut the Pi down safely? Any running program stops and the supply returns to a safe state.",
+  "pwr-shutdown": "Shut down",
+  "cancel": "Cancel",
+  "pwr-going": "⏻ Shutting down… wait about 30 s, then you can safely disconnect the power cable.",
+  "pwr-demo": " (demo — no real shutdown)"
 }

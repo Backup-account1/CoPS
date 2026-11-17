@@ -15,6 +15,7 @@ Without hardware (built-in emulator):
 import asyncio
 import glob
 import os
+import subprocess
 import threading
 import time
 
@@ -267,6 +268,33 @@ def _safe(raw: str) -> str:
         return f"{float(raw):.3f}"
     except (TypeError, ValueError):
         return "0.000"
+
+
+@app.post("/api/poweroff")
+def poweroff():
+    """Shut the Pi down safely: abort any running curve, park the supply at
+    0 V / output off, then trigger the OS shutdown a moment after this reply
+    reaches the panel. Demo mode never shuts down."""
+    if _is_demo():
+        db.add_event("poweroff_demo", "demo — no real shutdown")
+        return {"ok": True, "demo": True}
+    if _running():
+        _run["stopped"] = True
+        for _ in range(12):                  # give the runner up to ~2.4 s
+            if not _running():
+                break
+            time.sleep(0.2)
+    try:                                     # supply to a safe state
+        _scpi("VOLT 0;VOLT?")
+        _scpi("OUTP OFF;OUTP?")
+    except Exception:
+        pass
+    db.add_event("poweroff", "safe shutdown requested")
+    subprocess.Popen(
+        ["sudo", "-n", "/usr/local/bin/pi-poweroff.sh"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    return {"ok": True, "demo": False}
 
 
 @app.put("/api/settings")

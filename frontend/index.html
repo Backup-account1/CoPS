@@ -48,6 +48,10 @@
       <svg viewBox="0 0 24 24"><path d="M2 12h4l2-7 4 14 3-10 1.5 3H22"/></svg>
       <span data-i18n="program">Program</span>
     </button>
+    <button id="btn-power" class="tile" data-i18n-title="power">
+      <svg viewBox="0 0 24 24"><path d="M12 3v9M6.6 6.6a8 8 0 1 0 10.8 0"/></svg>
+      <span data-i18n="power">Power</span>
+    </button>
   </main>
 
   <!-- Settings drawer -->
@@ -165,6 +169,19 @@
     <div class="cv-legend">
       <span class="lv">V</span><span class="li">I</span>
       <span id="cv-time"></span><span id="cv-clock"></span>
+    </div>
+  </div>
+
+  <!-- Power-off confirmation -->
+  <div id="pwr-view" class="hidden">
+    <div class="pwr-box">
+      <button id="btn-pwr-x" class="pwr-x">✕</button>
+      <h2 data-i18n="power">Power</h2>
+      <p id="pwr-text">Shut the Pi down safely?</p>
+      <div class="row">
+        <button id="btn-pwr-yes" class="btn danger" data-i18n="pwr-shutdown">Shut down</button>
+        <button id="btn-pwr-no" class="btn" data-i18n="cancel">Cancel</button>
+      </div>
     </div>
   </div>
 

@@ -465,6 +465,29 @@ $("btn-cv-full").addEventListener("click", () => {
 
 setInterval(updateCurve, 700);
 
+/* ---- power off ------------------------------------------------------------ */
+$("btn-power").addEventListener("click", () => {
+  $("pwr-text").textContent = t("pwr-confirm");
+  $("btn-pwr-yes").classList.remove("gone");
+  $("btn-pwr-no").classList.remove("gone");
+  $("pwr-view").classList.remove("hidden");
+});
+$("btn-pwr-x").addEventListener("click",
+  () => $("pwr-view").classList.add("hidden"));
+$("btn-pwr-no").addEventListener("click",
+  () => $("pwr-view").classList.add("hidden"));
+$("btn-pwr-yes").addEventListener("click", async () => {
+  try {
+    const r = await api("/api/poweroff", { method: "POST" });
+    $("pwr-text").textContent = t("pwr-going") + (r.demo ? t("pwr-demo") : "");
+    $("btn-pwr-yes").classList.add("gone");
+    $("btn-pwr-no").classList.add("gone");
+  } catch (e) {
+    toast("✗ " + e.message);
+    $("pwr-view").classList.add("hidden");
+  }
+});
+
 /* ---- init ---- */
 loadManifest().catch(() => {});
 refreshStatus();
