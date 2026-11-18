@@ -76,14 +76,14 @@ main {
 #btn-power:active { background: #3a1a18; }
 
 /* Settings + Program drawers ------------------------------------------ */
-#overlay, #drawer, #pdrawer, #mdrawer { position: fixed; transition: 0.25s ease; }
+#overlay, #drawer, #pdrawer { position: fixed; transition: 0.25s ease; }
 #overlay {
   inset: 0; background: rgba(0, 0, 0, 0.55);
   opacity: 1;
 }
 #overlay.hidden { opacity: 0; pointer-events: none; }
 
-#drawer, #pdrawer, #mdrawer {
+#drawer, #pdrawer {
   right: 0; top: 0; height: 100%; width: min(92vw, 420px);
   background: #1b1f24; padding: 24px;
   display: flex; flex-direction: column; gap: 8px;
@@ -91,8 +91,8 @@ main {
   transform: translateX(0);
   overflow-y: auto;
 }
-#drawer.hidden, #pdrawer.hidden, #mdrawer.hidden { transform: translateX(105%); }
-#drawer h2, #pdrawer h2, #mdrawer h2 { margin: 0 0 12px; font-size: 24px; }
+#drawer.hidden, #pdrawer.hidden { transform: translateX(105%); }
+#drawer h2, #pdrawer h2 { margin: 0 0 12px; font-size: 24px; }
 #drawer label, #pdrawer label { margin-top: 14px; font-size: 15px; color: #9aa0a6; }
 #drawer small, #pdrawer small { color: #6b7280; }
 #drawer input, #drawer select, #pdrawer select {
@@ -272,4 +272,18 @@ label.langs { letter-spacing: 0.3px; }
 .logs a:active { filter: brightness(1.4); }
 .small { font-size: 12px; }
 .gone { display: none !important; }
-#mdrawer { padding-top: 64px; }  /* clear the floating menubar */
+
+/* Meters fullscreen page ------------------------------------------------- */
+#meters-view {
+  position: fixed; inset: 0; z-index: 20;
+  background: #111418; padding: 14px;
+  display: flex; flex-direction: column; gap: 6px;
+  overflow-y: auto;
+}
+#meters-view.hidden { display: none; }
+.cv-title { font-size: 18px; font-weight: 700; letter-spacing: 0.4px; }
+.mvalue b { font-size: clamp(44px, 13vw, 68px); }
+.logs { max-height: none; }
+
+#meters-view { z-index: 50; padding-top: 12px; }  /* standalone page: above menubar */
+#menubar.hidden { display: none; }

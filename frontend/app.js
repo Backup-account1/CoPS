@@ -148,16 +148,15 @@ $("btn-test").addEventListener("click", async () => {
 });
 
 /* ---- drawers ------------------------------------------------------------- */
-function openDrawer(el, open, metersInternal) {
+function openDrawer(el, open) {
   el.classList.toggle("hidden", !open);
   $("overlay").classList.toggle("hidden", !open);
-  if (el.id === "mdrawer") meterView(open);
   syncMenubar();
 }
 function closeDrawers() {
   openDrawer($("drawer"), false);
   openDrawer($("pdrawer"), false);
-  openDrawer($("mdrawer"), false, true);
+  closeMetersView();
 }
 
 /* ---- menu bar: back / screen title / home / history ----------------------- */
@@ -165,7 +164,7 @@ function syncMenubar() {
   const chartOpen = !$("chart-view").classList.contains("hidden");
   const pOpen = !$("pdrawer").classList.contains("hidden");
   const dOpen = !$("drawer").classList.contains("hidden");
-  const mOpen = !$("mdrawer").classList.contains("hidden");
+  const mOpen = !$("meters-view").classList.contains("hidden");
   $("mb-back").disabled = !(chartOpen || pOpen || dOpen || mOpen);
   if (!Object.keys(LANG.dict).length) return;   // translations not loaded yet
   $("mb-title").textContent = chartOpen ? t("chart")
@@ -178,7 +177,7 @@ function syncMenubar() {
 $("mb-back").addEventListener("click", () => {
   if (!$("chart-view").classList.contains("hidden")) closeChart();
   else if (!$("pdrawer").classList.contains("hidden")) openDrawer($("pdrawer"), false);
-  else if (!$("mdrawer").classList.contains("hidden")) openDrawer($("mdrawer"), false);
+  else if (!$("meters-view").classList.contains("hidden")) closeMetersView();
   else openDrawer($("drawer"), false);
 });
 $("mb-home").addEventListener("click", () => {
@@ -514,6 +513,8 @@ let metersBuilt = false;
 function meterView(open) {
   clearInterval(meterTimer);
   meterTimer = null;
+  $("meters-view").classList.toggle("hidden", !open);
+  $("menubar").classList.toggle("hidden", open);
   if (open) {
     refreshMeters();
     refreshRecLogs();
@@ -603,10 +604,16 @@ async function refreshRecLogs() {
     : `<li class="muted">${t("logs-empty")}</li>`;
 }
 
+function closeMetersView() {
+  meterView(false);
+  syncMenubar();
+}
+
 $("btn-meters").addEventListener("click", () => {
-  openDrawer($("mdrawer"), true);
+  meterView(true);
+  syncMenubar();
 });
-$("btn-mclose").addEventListener("click", () => openDrawer($("mdrawer"), false));
+$("btn-mv-close").addEventListener("click", closeMetersView);
 
 $("btn-rec").addEventListener("click", async () => {
   const active = !$("rec-dot").classList.contains("gone");

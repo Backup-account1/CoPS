@@ -163,9 +163,12 @@
   </section>
 
 
-  <!-- Meters drawer (OWON XDM1041 DMMs) -->
-  <section id="mdrawer" class="hidden">
-    <h2 data-i18n="meters">Meters</h2>
+  <!-- Meters: dedicated fullscreen page (OWON XDM1041 DMMs) -->
+  <div id="meters-view" class="hidden">
+    <div class="cv-head">
+      <span class="cv-title" data-i18n="meters">Meters</span>
+      <button id="btn-mv-close" class="btn small">✕</button>
+    </div>
     <div id="meter-cards"></div>
     <div class="row">
       <button id="btn-rec" class="btn primary"><span id="rec-dot" class="rec-dot gone"></span><span id="rec-label" data-i18n="record">Record</span></button>
@@ -175,8 +178,7 @@
     <h3 data-i18n="logs">Log files</h3>
     <ul id="rec-logs" class="logs"></ul>
     <p class="muted small" data-i18n="logs-keep">CSV per session — files are kept forever.</p>
-    <div class="row"><button id="btn-mclose" class="btn" data-i18n="close">Close</button></div>
-  </section>
+  </div>
 
   <!-- Fullscreen curve chart -->
   <div id="chart-view" class="hidden">
