@@ -173,8 +173,14 @@ def connect():
                                     # device rejects all setpoints otherwise
                                     # (-200 Execution error every write)
                 n2 = _drain_errq()  # SYST:REM itself logs an error entry
+                # zero the supply on every (re)connect so a reboot after
+                # shutdown starts at VOLT 0 / CURR 0 / OUTP OFF
+                _scpi("VOLT 0")
+                _scpi("CURR 0")
+                _scpi("OUTP OFF")
+                n3 = _drain_errq()
                 db.add_event("connect",
-                             f"{idn} remote=on drained={n}+{n2}")
+                             f"{idn} remote=on zeroed drained={n}+{n2}+{n3}")
                 return {"ok": True, "idn": idn}
             except Exception as e:
                 s.close()
