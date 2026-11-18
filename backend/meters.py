@@ -155,10 +155,14 @@ def _auto_ports() -> list:
 
 
 def _scan_real():
-    """Open each auto port once, keep the ones that answer as XDM1041.
-    Returns list of (port, idn) in stable (sorted) order."""
+    """Open each unclaimed auto port once, keep the ones that answer as
+    XDM1041. Ports already held by another slot are skipped entirely so the
+    scan can never race an active meter connection."""
+    held = {m.port for m in _meters if isinstance(m, MeterConn)}
     found = []
     for p in _auto_ports():
+        if p in held:
+            continue
         try:
             s = serial.Serial(p, BAUD, timeout=0.8)
             time.sleep(0.15)
@@ -284,8 +288,11 @@ def _poll_one(slot: int, meter, cfg: dict):
                 _values[slot]["error"] = f"record write failed: {e}"
 
 
+_next_scan = 0.0
+
+
 def _loop():
-    global _sig
+    global _sig, _next_scan
     while not _stop.is_set():
         demo = _is_demo()
         cfgs = _configs()
@@ -303,7 +310,18 @@ def _loop():
                 _values[i]["role"] = cfgs[i]["role"]
                 _values[i]["name"] = cfgs[i]["name"]
             _sig = sig
-        scan = [] if demo else _scan_real()
+        # scan at most every 2 s, and only while some auto slot has no
+        # open connection (an explicit-port slot never needs the scan)
+        now = time.time()
+        need_scan = (not demo) and any(
+            cfgs[i]["port"] == "auto"
+            and not (isinstance(_meters[i], MeterConn) and _meters[i].s is not None)
+            for i in range(2))
+        if need_scan and now >= _next_scan:
+            scan = _scan_real()
+            _next_scan = now + 2.0
+        else:
+            scan = []
         for i in range(2):
             cfg = cfgs[i]
             meter = _hold_connection(i, cfg, scan, demo)

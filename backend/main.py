@@ -86,10 +86,26 @@ def _is_demo() -> bool:
 
 
 def _candidate_ports() -> list:
-    ports = glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")
-    ports += glob.glob("/dev/usbtmc*")   # USBTMC supplies (ITECH/AKIP over USB)
+    # USBTMC first: our supply enumerates as /dev/usbtmc0 and a tty port
+    # at the wrong baud (e.g. a multimeter CH340) answers *IDN? with
+    # garbage that must not be mistaken for the supply
+    ports = glob.glob("/dev/usbtmc*")
+    ports += glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")
     ports += [f"COM{n}" for n in range(1, 21)]
     return ports
+
+
+_IDN_MARKERS = ("ITECH", "IT6726", "IT6700", "AKIP", "АКИП")
+
+def _valid_idn(s: str) -> bool:
+    """Strict check that a response is the supply's identity, not noise from
+    some other USB-serial device answering at the wrong baud."""
+    if not s or len(s) < 10 or len(s) > 100:
+        return False
+    if any(ord(c) < 32 and c not in "\r\n" for c in s):
+        return False
+    up = s.upper()
+    return any(k.upper() in up for k in _IDN_MARKERS)
 
 
 def _scpi(cmd: str, timeout: float = 2.0) -> str:
@@ -171,8 +187,8 @@ def connect():
             try:
                 globals()["_ser"] = s
                 idn = _scpi("*IDN?", timeout=3.0)
-                if len(idn) < 5:
-                    raise ValueError("no *IDN? response")
+                if not _valid_idn(idn):
+                    raise ValueError(f"not a supply (IDN rejected: {idn!r})")
                 globals()["_idn"] = idn
                 n = _drain_errq()
                 _scpi("SYST:REM")   # pure write: enable REMOTE mode — the
