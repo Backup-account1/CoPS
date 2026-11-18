@@ -89,7 +89,8 @@ Settings → Meters                     (only in Connection → Device mode)
   so faster polls repeat the cached reading — a 100 ms log simply contains
   repeated values between conversions
 - The **Meters** page shows both live values (V/A), session min/max,
-  function and port, mismatch warnings and connection state
+  function and port, mismatch warnings and connection state, plus a live
+  60 s chart of both readings with the current values in its top corner
 - **Record** starts a logging session — one CSV per session, written ~every
   100 ms, **kept forever** in `backend/logs/`
 

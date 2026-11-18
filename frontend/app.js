@@ -562,7 +562,59 @@ async function refreshMeters() {
     warn.classList.toggle("gone", !m.wrong_func);
     warn.textContent = t("wrong-func");
   }
+  pushMHist(s.meters);
   renderRecState(s.recording);
+}
+
+/* live scrolling chart: 60 s window, V in the upper band, A in the lower */
+const MCHART_WINDOW = 60000;
+const mHist = [];
+
+function pushMHist(meters) {
+  const v = meters[0] && meters[0].connected ? meters[0].value : null;
+  const i = meters[1] && meters[1].connected ? meters[1].value : null;
+  const now = Date.now();
+  if (v != null || i != null) {
+    mHist.push({ t: now, v, i });
+    while (mHist.length && now - mHist[0].t > MCHART_WINDOW) mHist.shift();
+    if (mHist.length > 400) mHist.shift();
+  }
+  $("mcorner-v").textContent = v != null ? `${v.toFixed(4)} V` : "-- V";
+  $("mcorner-i").textContent = i != null ? `${i.toFixed(4)} A` : "-- A";
+  drawMChart();
+}
+
+function drawMChart() {
+  const t1 = Date.now();
+  const win = mHist.filter((s) => t1 - s.t <= MCHART_WINDOW);
+  const line = (key, yTop, yBot) => {
+    const pts = win.filter((s) => s[key] != null);
+    if (pts.length < 2) return "";
+    const vs = pts.map((s) => s[key]);
+    const min = Math.min(...vs);
+    const range = Math.max(Math.max(...vs) - min, 0.0005);
+    return pts.map((s) => {
+      const x = 100 - ((t1 - s.t) / MCHART_WINDOW) * 100;
+      const y = yBot - ((s[key] - min) / range) * (yBot - yTop);
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    }).join(" ");
+  };
+  $("mchart-v").setAttribute("points", line("v", 3, 18));
+  $("mchart-i").setAttribute("points", line("i", 22, 37));
+  const last = win.length ? win[win.length - 1] : null;
+  const dot = (id, key, yTop, yBot) => {
+    const el = $(id);
+    if (!last || last[key] == null) { el.setAttribute("opacity", 0); return; }
+    const pts = win.filter((s) => s[key] != null);
+    const vs = pts.map((s) => s[key]);
+    const min = Math.min(...vs);
+    const range = Math.max(Math.max(...vs) - min, 0.0005);
+    el.setAttribute("cx", 100);
+    el.setAttribute("cy", yBot - ((last[key] - min) / range) * (yBot - yTop));
+    el.setAttribute("opacity", 1);
+  };
+  dot("mchart-dot-v", "v", 3, 18);
+  dot("mchart-dot-i", "i", 22, 37);
 }
 
 function renderRecState(rec) {
