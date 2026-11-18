@@ -49,6 +49,15 @@ def _limits():
     )
 
 
+@app.middleware("http")
+async def no_store(request, call_next):
+    """Tiny LAN panel — always serve fresh files so a stale browser cache
+    can never show an old UI without the latest widgets."""
+    resp = await call_next(request)
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
 @app.on_event("startup")
 def startup():
     db.init()
