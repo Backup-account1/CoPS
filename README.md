@@ -34,11 +34,40 @@ t,v,i
 10,12,2
 ```
 
-- Separators: comma, semicolon or tab; a non-numeric first line is a header
-- Values are clamped to the safety limits (`MAX_VOLT`, `MAX_CURR` env)
-- Points are linearly interpolated; setpoints update 5×/s
-- The Program window shows state, progress, a mini live chart; the Chart
-  button opens a fullscreen graph with axis marks and a running cursor
+**Format rules**
+
+| Rule | Detail |
+|------|--------|
+| **Columns** | **3 columns exactly**: `t` (seconds), `v` (volts), `i` (amps) |
+| **Separators** | comma, semicolon, tab, or spaces |
+| **Comments / params** | Lines starting with `#` — comments are ignored; `# loop=`, `# end=` set parameters |
+| **Header row** | Any non-numeric first line is skipped automatically |
+| **Time axis** | `t` in seconds, must strictly increase; first point `t=0` is typical |
+| **Values** | Clamped to safety limits (`MAX_VOLT` / `MAX_CURR` from Settings or env vars) |
+| **Min points** | At least 2 points required |
+
+**Parameters (in comment lines)**
+
+- `# loop=2` — number of repeats (`0` = infinite, default `1`)
+- `# end=off` — final state: `off` (output off, 0 V) or `hold` (keep last setpoint)
+
+**Example**
+
+```csv
+# loop=10
+# end=off
+0,0,5
+10,20,5
+20,0,5
+```
+
+**Behaviour**
+
+- Setpoints are linearly interpolated between points
+- The runner updates setpoints at 5 Hz; measured V/A are reported back every ~0.4 s
+- In the Program window you see live progress, a mini chart, and lap count
+- The Chart button opens a fullscreen graph with axis marks and a running cursor
+- On start, the curve is saved to SQLite; next boot it's available in the Program dropdown
 
 ## Hardware notes: USBTMC (ITECH/AKIP over USB)
 

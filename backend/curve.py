@@ -9,8 +9,10 @@ File format (one file, both curves — voltage and current share the timeline):
     5,12,0.5
     10,12,2
 
-Separators: comma, semicolon or tab. A non-numeric first line is treated as a
-header. Values are clamped to the safety limits.
+Every data row must have exactly 3 columns: time (s), voltage (V), current (A).
+Separators: comma, semicolon, tab or spaces.
+Lines starting with '#' are comments / params; a non-numeric first line is a
+header. Values are clamped to the safety limits (MAX_VOLT, MAX_CURR env vars).
 """
 
 import re
@@ -38,7 +40,7 @@ def parse_curve(text: str, max_v: float = 610.0, max_c: float = 10.5) -> dict:
                 elif k == "end" and v in ("off", "hold"):
                     params["end"] = v
             continue
-        parts = re.split(r"[,;\t]+", line)
+        parts = re.split(r"[,;\t ]+", line)
         try:
             t, v, i = float(parts[0]), float(parts[1]), float(parts[2])
         except (ValueError, IndexError):
