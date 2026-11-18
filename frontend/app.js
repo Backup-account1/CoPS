@@ -72,6 +72,9 @@ async function refreshStatus() {
     $("set-port").value = s.settings.port;
     $("set-baud").value = s.settings.baud;
     if ($("set-mode").value !== s.settings.mode) $("set-mode").value = s.settings.mode;
+    const ms = s.settings.meters || [];
+    if (ms[0]) { $("set-m1-port").value = ms[0].port || "auto"; $("set-m1-role").value = ms[0].role || "volt"; }
+    if (ms[1]) { $("set-m2-port").value = ms[1].port || "auto"; $("set-m2-role").value = ms[1].role || "curr"; }
     updateDeviceFields();
     if (LANG.current !== s.settings.language ||
         !Object.keys(LANG.dict).length) await setLang(s.settings.language);
@@ -145,14 +148,16 @@ $("btn-test").addEventListener("click", async () => {
 });
 
 /* ---- drawers ------------------------------------------------------------- */
-function openDrawer(el, open) {
+function openDrawer(el, open, metersInternal) {
   el.classList.toggle("hidden", !open);
   $("overlay").classList.toggle("hidden", !open);
+  if (el.id === "mdrawer") meterView(open);
   syncMenubar();
 }
 function closeDrawers() {
   openDrawer($("drawer"), false);
   openDrawer($("pdrawer"), false);
+  openDrawer($("mdrawer"), false, true);
 }
 
 /* ---- menu bar: back / screen title / home / history ----------------------- */
@@ -160,10 +165,12 @@ function syncMenubar() {
   const chartOpen = !$("chart-view").classList.contains("hidden");
   const pOpen = !$("pdrawer").classList.contains("hidden");
   const dOpen = !$("drawer").classList.contains("hidden");
-  $("mb-back").disabled = !(chartOpen || pOpen || dOpen);
+  const mOpen = !$("mdrawer").classList.contains("hidden");
+  $("mb-back").disabled = !(chartOpen || pOpen || dOpen || mOpen);
   if (!Object.keys(LANG.dict).length) return;   // translations not loaded yet
   $("mb-title").textContent = chartOpen ? t("chart")
     : pOpen ? t("program")
+    : mOpen ? t("meters")
     : dOpen ? t("settings")
     : t("panel");
 }
@@ -171,6 +178,7 @@ function syncMenubar() {
 $("mb-back").addEventListener("click", () => {
   if (!$("chart-view").classList.contains("hidden")) closeChart();
   else if (!$("pdrawer").classList.contains("hidden")) openDrawer($("pdrawer"), false);
+  else if (!$("mdrawer").classList.contains("hidden")) openDrawer($("mdrawer"), false);
   else openDrawer($("drawer"), false);
 });
 $("mb-home").addEventListener("click", () => {
@@ -195,6 +203,10 @@ $("btn-save").addEventListener("click", async () => {
       port: $("set-port").value.trim() || "auto",
       baud: parseInt($("set-baud").value, 10),
       mode: $("set-mode").value,
+      meters: [
+        { name: "Meter 1", port: $("set-m1-port").value.trim() || "auto", role: $("set-m1-role").value },
+        { name: "Meter 2", port: $("set-m2-port").value.trim() || "auto", role: $("set-m2-role").value },
+      ],
     };
     const r = await api("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     toast(t("save") + " ✓");
@@ -494,3 +506,127 @@ refreshStatus();
 refreshEvents();
 updateCurve();
 syncMenubar();
+
+/* ---- meters (OWON XDM1041 DMMs) --------------------------------------- */
+let meterTimer = null;
+let metersBuilt = false;
+
+function meterView(open) {
+  clearInterval(meterTimer);
+  meterTimer = null;
+  if (open) {
+    refreshMeters();
+    refreshRecLogs();
+    meterTimer = setInterval(refreshMeters, 500);
+  }
+}
+
+function buildMeterCards(meters) {
+  $("meter-cards").innerHTML = meters.map((m) => `
+    <div class="mcard">
+      <div class="mcard-head">
+        <span class="mname">${m.name}</span>
+        <span class="mrole ${m.role}" id="mrole-${m.slot}"></span>
+        <span class="mdot" id="mdot-${m.slot}"></span>
+      </div>
+      <div class="mvalue"><b id="mval-${m.slot}">--</b><span class="munit" id="munit-${m.slot}">
+        ${m.unit}</span></div>
+      <div class="mmeta muted" id="mmeta-${m.slot}"></div>
+      <div class="mwarn gone" id="mwarn-${m.slot}"></div>
+    </div>`).join("");
+  metersBuilt = true;
+}
+
+async function refreshMeters() {
+  let s;
+  try {
+    s = await api("/api/meters");
+  } catch {
+    return;                                   // backend down — keep last values
+  }
+  if (!metersBuilt) buildMeterCards(s.meters);
+  for (const m of s.meters) {
+    $("mrole-" + m.slot).textContent = m.role === "volt" ? t("role-volt") : t("role-curr");
+    $("mrole-" + m.slot).className = "mrole " + m.role;
+    $("mdot-" + m.slot).className = "mdot " + (m.connected ? "on" : "off");
+    $("mval-" + m.slot).textContent =
+      m.connected && m.value != null ? m.value.toFixed(4) : "--";
+    $("munit-" + m.slot).textContent = m.unit || "";
+    const mn = m.min != null ? m.min.toFixed(4) : "—";
+    const mx = m.max != null ? m.max.toFixed(4) : "—";
+    $("mmeta-" + m.slot).textContent = m.connected
+      ? `min ${mn} · max ${mx} · ${m.func || "?"} · ${m.port || ""}`
+      : (m.port || "?") + " — " + t("offline");
+    const warn = $("mwarn-" + m.slot);
+    warn.classList.toggle("gone", !m.wrong_func);
+    warn.textContent = t("wrong-func");
+  }
+  renderRecState(s.recording);
+}
+
+function renderRecState(rec) {
+  const dot = $("rec-dot");
+  const lbl = $("rec-label");
+  const st = $("rec-status");
+  if (rec.active) {
+    dot.classList.remove("gone");
+    lbl.textContent = t("stop");
+    $("btn-rec").classList.add("danger");
+    $("btn-rec").classList.remove("primary");
+    st.classList.remove("gone");
+    st.textContent = `● ${rec.file_name} — ${rec.rows} rows · ${rec.seconds}s`;
+  } else {
+    dot.classList.add("gone");
+    lbl.textContent = t("record");
+    $("btn-rec").classList.remove("danger");
+    $("btn-rec").classList.add("primary");
+    st.classList.add("gone");
+  }
+}
+
+function fmtSize(n) {
+  if (n < 1024) return n + " B";
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+  return (n / 1024 / 1024).toFixed(1) + " MB";
+}
+
+async function refreshRecLogs() {
+  let logs = [];
+  try {
+    logs = await api("/api/meters/logs");
+  } catch { /* ignore */ }
+  const ul = $("rec-logs");
+  ul.innerHTML = logs.length
+    ? logs.map((l) =>
+        `<li><a href="/api/meters/logs/${encodeURIComponent(l.name)}" download>${l.name}</a>` +
+        `<span class="muted">${fmtSize(l.size)}</span></li>`).join("")
+    : `<li class="muted">${t("logs-empty")}</li>`;
+}
+
+$("btn-meters").addEventListener("click", () => {
+  openDrawer($("mdrawer"), true);
+});
+$("btn-mclose").addEventListener("click", () => openDrawer($("mdrawer"), false));
+
+$("btn-rec").addEventListener("click", async () => {
+  const active = !$("rec-dot").classList.contains("gone");
+  try {
+    if (active) {
+      const r = await api("/api/meters/record/stop", { method: "POST" });
+      if (r.file_name) toast(`✓ ${r.file_name} · ${r.rows} rows`);
+    } else {
+      await api("/api/meters/record/start", { method: "POST" });
+    }
+  } catch (e) {
+    toast("✗ " + e.message);
+  }
+  refreshMeters();
+  refreshRecLogs();
+});
+
+$("btn-reset-minmax").addEventListener("click", async () => {
+  try {
+    await api("/api/meters/reset-minmax", { method: "POST" });
+  } catch { /* ignore */ }
+  refreshMeters();
+});

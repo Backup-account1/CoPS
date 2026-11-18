@@ -20,12 +20,16 @@ import threading
 import time
 
 import db
+import meters
 from curve import interp, parse_curve
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from typing import Optional
 
-DEFAULTS = {"language": "en", "port": "auto", "baud": 9600, "mode": "device"}
+DEFAULTS = {"language": "en", "port": "auto", "baud": 9600, "mode": "device",
+            "meters": meters.DEFAULT_METERS}
 
 app = FastAPI(title="AKIP-1144 Panel")
 
@@ -48,6 +52,7 @@ def _limits():
 @app.on_event("startup")
 def startup():
     db.init()
+    meters.start(load_settings)
     row = db.load_curve()
     if row:
         try:
@@ -64,6 +69,7 @@ class Settings(BaseModel):
     port: str = "auto"
     baud: int = 9600
     mode: str = "device"   # "device" or "emulator"
+    meters: Optional[list] = None
 
 
 def load_settings() -> dict:
@@ -318,7 +324,15 @@ def update_settings(s: Settings):
     if s.mode not in ("device", "emulator"):
         raise HTTPException(422, "mode must be device or emulator")
     old = load_settings()
-    save_settings(s.model_dump())
+    data = s.model_dump()
+    if data["meters"] is None:
+        data["meters"] = old.get("meters") or meters.DEFAULT_METERS
+    else:
+        for i, m in enumerate(data["meters"][:2]):
+            if m.get("role") not in ("volt", "curr"):
+                raise HTTPException(422, "meter role must be volt or curr")
+        data["meters"] = data["meters"][:2]
+    save_settings(data)
     # reconnect required if connection params changed
     if (old["port"], old["baud"], old["mode"]) != (s.port, s.baud, s.mode) and _ser is not None:
         disconnect()
@@ -467,6 +481,46 @@ def curve_progress():
         "meas_volt": _meas["volt"], "meas_curr": _meas["curr"],
         **_curve_meta(),
     }
+
+
+# ---- meters (OWON XDM1041 DMMs) ----------------------------------------
+@app.get("/api/meters")
+def meters_status():
+    return meters.snapshot()
+
+
+@app.post("/api/meters/record/start")
+def meters_record_start():
+    r = meters.record_start()
+    db.add_event("meters_record_start", r.get("file_name", ""))
+    return r
+
+
+@app.post("/api/meters/record/stop")
+def meters_record_stop():
+    r = meters.record_stop()
+    if r.get("file_name"):
+        db.add_event("meters_record_stop",
+                     f'{r["file_name"]} rows={r.get("rows", 0)}')
+    return r
+
+
+@app.post("/api/meters/reset-minmax")
+def meters_reset_minmax():
+    return meters.reset_minmax()
+
+
+@app.get("/api/meters/logs")
+def meters_logs():
+    return meters.list_logs()
+
+
+@app.get("/api/meters/logs/{name}")
+def meters_log_download(name: str):
+    p = meters.log_path(name)
+    if p is None:
+        raise HTTPException(404, "log not found")
+    return FileResponse(p, media_type="text/csv", filename=p.name)
 
 
 # ---- static frontend (mounted last) ----------------------------------

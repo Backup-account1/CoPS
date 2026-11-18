@@ -35,5 +35,15 @@
   "pwr-shutdown": "Shut down",
   "cancel": "Cancel",
   "pwr-going": "⏻ Shutting down… wait about 30 s, then you can safely disconnect the power cable.",
-  "pwr-demo": " (demo — no real shutdown)"
+  "pwr-demo": " (demo — no real shutdown)",
+  "meters": "Meters",
+  "record": "Record",
+  "logs": "Log files",
+  "logs-empty": "No recordings yet",
+  "logs-keep": "One CSV per session — files are kept forever.",
+  "minmax-reset": "Reset min/max",
+  "role-volt": "Voltage",
+  "role-curr": "Current",
+  "wrong-func": "Function mismatch — set the front panel to match this meter",
+  "offline": "not found"
 }

@@ -69,6 +69,40 @@ t,v,i
 - The Chart button opens a fullscreen graph with axis marks and a running cursor
 - On start, the curve is saved to SQLite; next boot it's available in the Program dropdown
 
+## Meters (OWON XDM1041)
+
+The panel can poll **OWON XDM1041** bench multimeters over USB and log
+their readings to CSV. Two meters are supported (one voltage, one current);
+users set the function on each meter's front panel — the backend never
+switches it remotely (it only reads `FUNC?` to keep the label honest).
+
+```
+Settings → Meters                     (only in Connection → Device mode)
+  M1 · V : port = auto, role = Voltage
+  M2 · A : port = auto, role = Current
+```
+
+- `auto` scans `/dev/ttyUSB*` / `/dev/ttyACM*` and keeps the ports that
+  answer `*IDN?` as XDM1041 (115200 8N1)
+- Readings are polled as fast as the meter answers (roughly every 100 ms
+  round-trip). **Note:** the XDM1041 converts internally at only ~2–5 Hz,
+  so faster polls repeat the cached reading — a 100 ms log simply contains
+  repeated values between conversions
+- The **Meters** page shows both live values (V/A), session min/max,
+  function and port, mismatch warnings and connection state
+- **Record** starts a logging session — one CSV per session, written ~every
+  100 ms, **kept forever** in `backend/logs/`
+
+```csv
+timestamp,meter,function,value,unit
+2026-11-18T16:35:50.950,Meter 1,VOLT,3.4888,V
+2026-11-18T16:35:50.972,Meter 2,CURR,0.80518,A
+```
+
+The **Log files** list on the Meters page downloads any recorded CSV.
+DEMO mode (`DEMO=1` or Connection → Emulator) simulates both meters, so the
+feature works without hardware and in the test suite.
+
 ## Hardware notes: USBTMC (ITECH/AKIP over USB)
 
 Some units enumerate as **USBTMC** (`/dev/usbtmc0`) instead of a virtual COM

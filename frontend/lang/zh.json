@@ -35,5 +35,15 @@
   "pwr-shutdown": "关机",
   "cancel": "取消",
   "pwr-going": "⏻ 正在关机…请等待约 30 秒，然后即可安全断开电源线。",
-  "pwr-demo": "（演示 — 不会真正关机）"
+  "pwr-demo": "（演示 — 不会真正关机）",
+  "meters": "万用表",
+  "record": "记录",
+  "logs": "日志文件",
+  "logs-empty": "暂无记录",
+  "logs-keep": "每次会话生成一个 CSV —— 文件永久保留。",
+  "minmax-reset": "重置最大/最小值",
+  "role-volt": "电压",
+  "role-curr": "电流",
+  "wrong-func": "功能不匹配 — 请在万用表面板上切换到对应功能",
+  "offline": "未找到"
 }

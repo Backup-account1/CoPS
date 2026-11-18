@@ -11,3 +11,4 @@ backend/panel.db
 # OS / editor
 .DS_Store
 Thumbs.db
+backend/logs/

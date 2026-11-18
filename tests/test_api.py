@@ -64,3 +64,31 @@ def test_curve_progress_returns_measured_values(base_url):
     finally:
         _post(f"{base_url}/api/curve/stop")
         _post(f"{base_url}/api/disconnect")
+
+def test_meters_demo_polling_and_recording(base_url):
+    s = _get(f"{base_url}/api/meters")
+    assert len(s["meters"]) == 2
+    m1, m2 = s["meters"]
+    assert (m1["role"], m1["connected"]) == ("volt", True)
+    assert (m2["role"], m2["connected"]) == ("curr", True)
+    assert isinstance(m1["value"], float) and isinstance(m2["value"], float)
+
+    r = _post(f"{base_url}/api/meters/record/start")
+    assert r["ok"] and r["file_name"].endswith(".csv")
+    time.sleep(1.2)
+    r = _post(f"{base_url}/api/meters/record/stop")
+    fname = r["file_name"]
+    try:
+        logs = _get(f"{base_url}/api/meters/logs")
+        assert any(l["name"] == fname for l in logs), logs
+        body = urllib.request.urlopen(
+            f"{base_url}/api/meters/logs/{fname}", timeout=10).read().decode()
+        assert body.startswith("timestamp,meter,function,value,unit")
+        assert body.count("\n") > 5, body
+    finally:
+        if r.get("file"):
+            try:
+                import os
+                os.remove(r["file"])
+            except OSError:
+                pass
