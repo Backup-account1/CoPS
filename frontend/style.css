@@ -288,23 +288,24 @@ label.langs { letter-spacing: 0.3px; }
 #meters-view { z-index: 50; padding-top: 12px; }  /* standalone page: above menubar */
 #menubar.hidden { display: none; }
 
-/* Meters live chart ------------------------------------------------------ */
-#mchart-wrap {
-  position: relative; flex: 1; min-height: 150px;
+/* Meters page: compact status + two big charts -------------------------- */
+.mstatus { font-size: 13px; color: #9aa0a6; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.mstatus .on { color: #69f0ae; }
+.mstatus .off { color: #ff5252; }
+.mstatus .warn { color: #ffd54f; }
+.mchart {
+  position: relative; flex: 1; min-height: 140px;
   background: #0d1013; border: 1px solid #30363d; border-radius: 14px;
-  padding: 10px; margin-top: 12px; display: flex;
+  padding: 8px; margin-top: 8px; display: flex;
 }
-#mchart-svg { width: 100%; height: 100%; min-height: 120px; }
-#mchart-svg .grid { stroke: #1c2228; stroke-width: 1; }
-#mchart-corner {
-  position: absolute; top: 8px; right: 12px;
-  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+.mchart svg { width: 100%; height: 100%; min-height: 110px; }
+.mchart .grid { stroke: #1c2228; stroke-width: 1; }
+.mcorner {
+  position: absolute; top: 4px; left: 10px;
+  display: flex; align-items: center; gap: 6px;
   font-variant-numeric: tabular-nums;
 }
-#mchart-corner span { display: flex; align-items: center; gap: 6px; }
-#mchart-corner i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-#mchart-corner .v i { background: #ff5252; }
-#mchart-corner .i i { background: #e8eaed; }
-#mchart-corner .v b { color: #ff8a80; }
-#mchart-corner .i b { color: #e8eaed; }
-#mchart-corner b { font-size: 16px; font-weight: 700; }
+.mcorner i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.mcorner i.v { background: #ff5252; }
+.mcorner i.i { background: #e8eaed; }
+.mcorner b { font-size: 13px; font-weight: 700; color: #9aa0a6; }

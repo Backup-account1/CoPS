@@ -169,22 +169,30 @@
       <span class="cv-title" data-i18n="meters">Meters</span>
       <button id="btn-mv-close" class="btn small">✕</button>
     </div>
-    <div id="meter-cards"></div>
-    <div id="mchart-wrap">
-      <svg id="mchart-svg" viewBox="0 0 100 40" preserveAspectRatio="none">
+    <div id="mstatus" class="mstatus"></div>
+
+    <div class="mchart">
+      <svg id="mchart-v-svg" viewBox="0 0 100 40" preserveAspectRatio="none">
         <line class="grid" x1="0" x2="100" y1="10" y2="10"/>
         <line class="grid" x1="0" x2="100" y1="20" y2="20"/>
         <line class="grid" x1="0" x2="100" y1="30" y2="30"/>
         <polyline id="mchart-v" points="" fill="none" stroke="#ff5252" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
-        <polyline id="mchart-i" points="" fill="none" stroke="#e8eaed" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
         <circle id="mchart-dot-v" r="1.6" fill="#ff5252" opacity="0"/>
+      </svg>
+      <div class="mcorner"><i class="v"></i><b id="mcorner-v">-- V</b></div>
+    </div>
+
+    <div class="mchart">
+      <svg id="mchart-i-svg" viewBox="0 0 100 40" preserveAspectRatio="none">
+        <line class="grid" x1="0" x2="100" y1="10" y2="10"/>
+        <line class="grid" x1="0" x2="100" y1="20" y2="20"/>
+        <line class="grid" x1="0" x2="100" y1="30" y2="30"/>
+        <polyline id="mchart-i" points="" fill="none" stroke="#e8eaed" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
         <circle id="mchart-dot-i" r="1.6" fill="#e8eaed" opacity="0"/>
       </svg>
-      <div id="mchart-corner">
-        <span class="v"><i></i><b id="mcorner-v">-- V</b></span>
-        <span class="i"><i></i><b id="mcorner-i">-- A</b></span>
-      </div>
+      <div class="mcorner"><i class="i"></i><b id="mcorner-i">-- A</b></div>
     </div>
+
     <div class="row">
       <button id="btn-rec" class="btn primary"><span id="rec-dot" class="rec-dot gone"></span><span id="rec-label" data-i18n="record">Record</span></button>
       <button id="btn-reset-minmax" class="btn" data-i18n="minmax-reset">Reset min/max</button>

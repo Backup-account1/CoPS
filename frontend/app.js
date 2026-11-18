@@ -508,7 +508,6 @@ syncMenubar();
 
 /* ---- meters (OWON XDM1041 DMMs) --------------------------------------- */
 let meterTimer = null;
-let metersBuilt = false;
 
 function meterView(open) {
   clearInterval(meterTimer);
@@ -522,20 +521,16 @@ function meterView(open) {
   }
 }
 
-function buildMeterCards(meters) {
-  $("meter-cards").innerHTML = meters.map((m) => `
-    <div class="mcard">
-      <div class="mcard-head">
-        <span class="mname">${m.name}</span>
-        <span class="mrole ${m.role}" id="mrole-${m.slot}"></span>
-        <span class="mdot" id="mdot-${m.slot}"></span>
-      </div>
-      <div class="mvalue"><b id="mval-${m.slot}">--</b><span class="munit" id="munit-${m.slot}">
-        ${m.unit}</span></div>
-      <div class="mmeta muted" id="mmeta-${m.slot}"></div>
-      <div class="mwarn gone" id="mwarn-${m.slot}"></div>
-    </div>`).join("");
-  metersBuilt = true;
+function renderMeterStatus(meters) {
+  $("mstatus").innerHTML = meters.map((m) => {
+    const dot = `<span class="${m.connected ? "on" : "off"}">●</span>`;
+    const name = `<b>${m.name}</b>`;
+    if (!m.connected) return `${dot} ${name} — ${t("offline")}`;
+    const mn = m.min != null ? m.min.toFixed(4) : "—";
+    const mx = m.max != null ? m.max.toFixed(4) : "—";
+    const warn = m.wrong_func ? ` <span class="warn">⚠ ${m.func}</span>` : "";
+    return `${dot} ${name} · ${m.func || "?"} · ${m.port || ""} · min ${mn} max ${mx}${warn}`;
+  }).join("<span>&nbsp;&nbsp;</span>");
 }
 
 async function refreshMeters() {
@@ -545,28 +540,12 @@ async function refreshMeters() {
   } catch {
     return;                                   // backend down — keep last values
   }
-  if (!metersBuilt) buildMeterCards(s.meters);
-  for (const m of s.meters) {
-    $("mrole-" + m.slot).textContent = m.role === "volt" ? t("role-volt") : t("role-curr");
-    $("mrole-" + m.slot).className = "mrole " + m.role;
-    $("mdot-" + m.slot).className = "mdot " + (m.connected ? "on" : "off");
-    $("mval-" + m.slot).textContent =
-      m.connected && m.value != null ? m.value.toFixed(4) : "--";
-    $("munit-" + m.slot).textContent = m.unit || "";
-    const mn = m.min != null ? m.min.toFixed(4) : "—";
-    const mx = m.max != null ? m.max.toFixed(4) : "—";
-    $("mmeta-" + m.slot).textContent = m.connected
-      ? `min ${mn} · max ${mx} · ${m.func || "?"} · ${m.port || ""}`
-      : (m.port || "?") + " — " + t("offline");
-    const warn = $("mwarn-" + m.slot);
-    warn.classList.toggle("gone", !m.wrong_func);
-    warn.textContent = t("wrong-func");
-  }
+  renderMeterStatus(s.meters);
   pushMHist(s.meters);
   renderRecState(s.recording);
 }
 
-/* live scrolling chart: 60 s window, V in the upper band, A in the lower */
+/* live scrolling charts: 60 s window, one chart per meter */
 const MCHART_WINDOW = 60000;
 const mHist = [];
 
@@ -584,37 +563,40 @@ function pushMHist(meters) {
   drawMChart();
 }
 
-function drawMChart() {
+function mSeries(key, yTop, yBot) {
   const t1 = Date.now();
-  const win = mHist.filter((s) => t1 - s.t <= MCHART_WINDOW);
-  const line = (key, yTop, yBot) => {
-    const pts = win.filter((s) => s[key] != null);
-    if (pts.length < 2) return "";
-    const vs = pts.map((s) => s[key]);
-    const min = Math.min(...vs);
-    const range = Math.max(Math.max(...vs) - min, 0.0005);
-    return pts.map((s) => {
+  const pts = mHist.filter((s) => t1 - s.t <= MCHART_WINDOW && s[key] != null);
+  if (pts.length < 2) return { pts: "", min: 0, range: 0.0005 };
+  const vs = pts.map((s) => s[key]);
+  const min = Math.min(...vs);
+  const range = Math.max(Math.max(...vs) - min, 0.0005);
+  return {
+    pts: pts.map((s) => {
       const x = 100 - ((t1 - s.t) / MCHART_WINDOW) * 100;
       const y = yBot - ((s[key] - min) / range) * (yBot - yTop);
       return `${x.toFixed(2)},${y.toFixed(2)}`;
-    }).join(" ");
+    }).join(" "),
+    min, range, yTop, yBot,
   };
-  $("mchart-v").setAttribute("points", line("v", 3, 18));
-  $("mchart-i").setAttribute("points", line("i", 22, 37));
-  const last = win.length ? win[win.length - 1] : null;
-  const dot = (id, key, yTop, yBot) => {
+}
+
+function drawMChart() {
+  const v = mSeries("v", 4, 36);
+  const i = mSeries("i", 4, 36);
+  $("mchart-v").setAttribute("points", v.pts);
+  $("mchart-i").setAttribute("points", i.pts);
+  const dot = (id, key, s) => {
     const el = $(id);
-    if (!last || last[key] == null) { el.setAttribute("opacity", 0); return; }
-    const pts = win.filter((s) => s[key] != null);
-    const vs = pts.map((s) => s[key]);
-    const min = Math.min(...vs);
-    const range = Math.max(Math.max(...vs) - min, 0.0005);
+    const t1 = Date.now();
+    const last = [...mHist].reverse().find(
+      (x) => x[key] != null && t1 - x.t <= MCHART_WINDOW);
+    if (!last || !s.range) { el.setAttribute("opacity", 0); return; }
     el.setAttribute("cx", 100);
-    el.setAttribute("cy", yBot - ((last[key] - min) / range) * (yBot - yTop));
+    el.setAttribute("cy", s.yBot - ((last[key] - s.min) / s.range) * (s.yBot - s.yTop));
     el.setAttribute("opacity", 1);
   };
-  dot("mchart-dot-v", "v", 3, 18);
-  dot("mchart-dot-i", "i", 22, 37);
+  dot("mchart-dot-v", "v", v);
+  dot("mchart-dot-i", "i", i);
 }
 
 function renderRecState(rec) {
